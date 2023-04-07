@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/ed25519"
 	"crypto/rand"
+	"flag"
 	"fmt"
 	"image"
 	"image/color"
@@ -13,7 +14,24 @@ import (
 )
 
 func main() {
-	pubKey := generatePublicKey()
+	var generateFlag bool
+	var publicKeyInput string
+
+	flag.BoolVar(&generateFlag, "generate", false, "Generate a new public key")
+	flag.StringVar(&publicKeyInput, "pubkey", "", "Use the provided public key")
+	flag.Parse()
+
+	var pubKey ed25519.PublicKey
+
+	if generateFlag {
+		pubKey = generatePublicKey()
+	} else if publicKeyInput != "" {
+		pubKey = parsePublicKey(publicKeyInput)
+	} else {
+		fmt.Println("Please provide --generate flag or --pubkey flag with a public key value.")
+		return
+	}
+
 	frameCount := 2048
 	for frame := 0; frame < frameCount; frame++ {
 		img := createImage(pubKey, frame, frameCount)
@@ -27,6 +45,16 @@ func generatePublicKey() ed25519.PublicKey {
 	fmt.Printf("Public key: %x\n", pubKey)
 	fmt.Printf("Private key: %x\n", privKey)
 	return ed25519.PublicKey(pubKey)
+}
+
+func parsePublicKey(publicKeyInput string) ed25519.PublicKey {
+	var pubKeyBytes []byte
+	_, err := fmt.Sscanf(publicKeyInput, "%x", &pubKeyBytes)
+	if err != nil {
+		fmt.Println("Error parsing public key:", err)
+		os.Exit(1)
+	}
+	return ed25519.PublicKey(pubKeyBytes)
 }
 
 func createImage(pubKey ed25519.PublicKey, frame, frameCount int) *image.RGBA {
